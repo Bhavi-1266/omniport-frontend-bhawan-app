@@ -43,6 +43,8 @@ class BulkRegister extends React.Component {
     submitting: ''
   }
 
+  fileInput = React.createRef()
+
   handleFileChange = (e) => {
     const file = e.target.files[0]
     // Clearing the input lets the same file be picked again after it is fixed.
@@ -61,17 +63,26 @@ class BulkRegister extends React.Component {
       return
     }
     const { constants } = this.props
-    file.text().then((text) => {
-      this.setState({
-        ...emptyFile,
-        fileName: file.name,
-        ...checkResidentsCsv(text, {
-          hostels: constants.hostels,
-          branches: constants.branches,
-          feeTypes: constants.statuses.FEE_TYPES
+    file.text().then(
+      (text) => {
+        this.setState({
+          ...emptyFile,
+          fileName: file.name,
+          ...checkResidentsCsv(text, {
+            hostels: constants.hostels,
+            branches: constants.branches,
+            feeTypes: constants.statuses.FEE_TYPES
+          })
         })
-      })
-    })
+      },
+      () => {
+        this.setState({
+          ...emptyFile,
+          fileName: file.name,
+          fileErrors: [`"${file.name}" could not be read. Choose the file again.`]
+        })
+      }
+    )
   }
 
   removeFile = () => {
@@ -205,19 +216,18 @@ class BulkRegister extends React.Component {
         <Header as='h4'>Bulk Register Students</Header>
         <div styleName='actions'>
           <Button
-            as='label'
-            htmlFor='bulk-register-file'
             basic
             icon='file alternate outline'
             content={fileName || 'Choose CSV file'}
             disabled={!!submitting}
+            onClick={() => this.fileInput.current.click()}
           />
           {fileName && (
             <Button basic icon='close' content='Remove file' disabled={!!submitting} onClick={this.removeFile} />
           )}
           <input
+            ref={this.fileInput}
             type='file'
-            id='bulk-register-file'
             accept='.csv'
             hidden
             onChange={this.handleFileChange}
