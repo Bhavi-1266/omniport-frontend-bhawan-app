@@ -45,6 +45,10 @@ export const registrationUrl = () => {
   return `${baseNavUrl('/registration')}`
 }
 
+export const bulkRegistrationUrl = () => {
+  return `${baseNavUrl('/bulk_registration')}`
+}
+
 export const roomUrl = () => {
   return `${baseNavUrl('/room')}`
 }
@@ -159,6 +163,10 @@ export const residentSearchUrl = (residence, enrollmentNo) => {
 
 export const residentUrl = (residence) => {
   return `${baseApiUrl()}${residence}/resident/`
+}
+
+export const bulkRegisterResidentsUrl = (residence) => {
+  return `${baseApiUrl()}${residence}/resident/bulk_register/`
 }
 
 export const residentDownloadUrl = (residence) => {

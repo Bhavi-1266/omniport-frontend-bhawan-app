@@ -1,0 +1,16 @@
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.table-overflow {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+}
+
+.wide-table {
+    min-width: 60rem;
+}
