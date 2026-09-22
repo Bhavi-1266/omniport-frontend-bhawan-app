@@ -6,26 +6,28 @@ const ROOM_NO_MAX_LENGTH = 10
 const DATE_FORMATS = ['D/M/YYYY', 'D-M-YYYY', 'YYYY-MM-DD']
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Headers double as aliases of the admin import script, so one file works with both.
+// Headers match ignoring case, spaces and underscores, so "Room No" is read as Room_No.
 export const COLUMNS = [
-  { header: 'Enrollment No', key: 'enrolment_number', required: true, example: '26114001', note: 'Exactly 8 digits' },
+  { header: 'Enrollment_NO', key: 'enrolment_number', required: true, example: '26114001', note: 'Exactly 8 digits' },
   { header: 'Name', key: 'full_name', required: true, example: 'Aarav Sharma', note: 'Full name of the student' },
-  { header: 'Bhawan Code', key: 'hostel_code', required: true, example: 'rjb', note: 'One of the bhawan codes listed below' },
-  { header: 'Room No', key: 'room_no', required: true, example: 'A-101', note: `At most ${ROOM_NO_MAX_LENGTH} characters` },
+  { header: 'Bhawan_Name', key: 'hostel_code', required: true, example: 'Rajendra bhawan', note: 'Name or code of a bhawan listed below' },
+  { header: 'Room_No', key: 'room_no', required: true, example: 'A-101', note: `At most ${ROOM_NO_MAX_LENGTH} characters` },
   { header: 'Seat', key: 'seat', example: 'B', note: 'Bed or seat within the room' },
-  { header: 'Branch Code', key: 'branch_code', example: 'CSE', note: 'Needed for students who are not in the kernel yet' },
-  { header: 'Current Semester', key: 'current_semester', example: '1', note: 'Whole number, 1 if left empty' },
-  { header: 'Fee Type', key: 'fee_type', example: 'LIVING', note: 'One of the fee types listed below, LIVING if left empty' },
-  { header: 'Admission Date', key: 'admission_date', example: '20/07/2026', note: 'DD/MM/YYYY', date: true },
-  { header: 'Date of Birth', key: 'dob', example: '14/03/2008', note: 'DD/MM/YYYY', date: true },
+  { header: 'Branch_Code', key: 'branch_code', example: 'CSE', note: 'Needed for students who are not in the kernel yet' },
+  { header: 'Current_Semester', key: 'current_semester', example: '1', note: 'Whole number, 1 if left empty' },
+  { header: 'Fee_Type', key: 'fee_type', example: 'LIVING', note: 'One of the fee types listed below, LIVING if left empty' },
+  { header: 'Admission_Date', key: 'admission_date', example: '20/07/2026', note: 'DD/MM/YYYY', date: true },
+  { header: 'Date_Of_Birth', key: 'dob', example: '14/03/2008', note: 'DD/MM/YYYY', date: true },
   { header: 'Email', key: 'email', example: 'aarav_s@iitr.ac.in', note: '' },
-  { header: 'Mobile No', key: 'mobile_no', example: '9876543210', note: '' },
+  { header: 'Mobile_No', key: 'mobile_no', example: '9876543210', note: '' },
   { header: 'Address', key: 'address', example: '12 MG Road, Jaipur', note: 'Home address for bhawan records' },
-  { header: 'Fathers Name', key: 'father_name', example: 'Rakesh Sharma', note: '' },
-  { header: 'Fathers Contact', key: 'father_contact', example: '9876500000', note: '' },
-  { header: 'Mothers Name', key: 'mother_name', example: 'Sunita Sharma', note: '' },
-  { header: 'Mothers Contact', key: 'mother_contact', example: '9876511111', note: '' }
+  { header: 'Fathers_Name', key: 'father_name', example: 'Rakesh Sharma', note: '' },
+  { header: 'Fathers_Contact', key: 'father_contact', example: '9876500000', note: '' },
+  { header: 'Mothers_Name', key: 'mother_name', example: 'Sunita Sharma', note: '' },
+  { header: 'Mothers_Contact', key: 'mother_contact', example: '9876511111', note: '' }
 ]
+
+const headerOf = (key) => COLUMNS.find((column) => column.key === key).header
 
 export const TEMPLATE_CSV = `${COLUMNS.map((column) => column.header).join(',')}\r\n`
 
@@ -41,7 +43,7 @@ const findKey = (map, value) =>
   Object.keys(map).find((key) => key.toLowerCase() === value.toLowerCase())
 
 const findKeyByLabel = (map, value) =>
-  Object.keys(map).find((key) => String(map[key]).toLowerCase() === value.toLowerCase())
+  Object.keys(map).find((key) => String(map[key]).trim().toLowerCase() === value.toLowerCase())
 
 // RFC 4180: quoted fields may hold commas, line breaks and "" as an escaped quote.
 export const parseCsv = (text) => {
@@ -107,33 +109,33 @@ const checkRow = (data, { hostels, branches, feeTypes }) => {
 
   data.enrolment_number = cleanValue(data.enrolment_number.replace(/ /g, ''))
   if (data.enrolment_number && !ENROLMENT_NUMBER_PATTERN.test(data.enrolment_number)) {
-    errors.push(`Enrollment No "${data.enrolment_number}" must be exactly 8 digits.`)
+    errors.push(`${headerOf('enrolment_number')} "${data.enrolment_number}" must be exactly 8 digits.`)
   }
 
   if (data.hostel_code) {
-    const code = findKey(hostels, data.hostel_code)
+    const code = findKey(hostels, data.hostel_code) || findKeyByLabel(hostels, data.hostel_code)
     if (code) data.hostel_code = code
-    else errors.push(`Bhawan Code "${data.hostel_code}" does not exist in the kernel.`)
+    else errors.push(`${headerOf('hostel_code')} "${data.hostel_code}" is not a bhawan name or code in the kernel.`)
   }
 
   if (data.room_no.length > ROOM_NO_MAX_LENGTH) {
-    errors.push(`Room No "${data.room_no}" is longer than ${ROOM_NO_MAX_LENGTH} characters.`)
+    errors.push(`${headerOf('room_no')} "${data.room_no}" is longer than ${ROOM_NO_MAX_LENGTH} characters.`)
   }
 
   if (data.branch_code) {
     const code = findKey(branches, data.branch_code)
     if (code) data.branch_code = code
-    else errors.push(`Branch Code "${data.branch_code}" does not exist in the kernel.`)
+    else errors.push(`${headerOf('branch_code')} "${data.branch_code}" does not exist in the kernel.`)
   }
 
   if (data.current_semester && !(/^\d+$/.test(data.current_semester) && Number(data.current_semester) >= 1)) {
-    errors.push(`Current Semester "${data.current_semester}" must be a whole number of 1 or more.`)
+    errors.push(`${headerOf('current_semester')} "${data.current_semester}" must be a whole number of 1 or more.`)
   }
 
   if (data.fee_type) {
     const code = findKey(feeTypes, data.fee_type) || findKeyByLabel(feeTypes, data.fee_type)
     if (code) data.fee_type = code
-    else errors.push(`Fee Type "${data.fee_type}" must be one of ${Object.values(feeTypes).join(', ')}.`)
+    else errors.push(`${headerOf('fee_type')} "${data.fee_type}" must be one of ${Object.values(feeTypes).join(', ')}.`)
   }
 
   COLUMNS.filter((column) => column.date).forEach(({ header, key }) => {
@@ -144,7 +146,7 @@ const checkRow = (data, { hostels, branches, feeTypes }) => {
   })
 
   if (data.email && !EMAIL_PATTERN.test(data.email)) {
-    errors.push(`Email "${data.email}" is not a valid email address.`)
+    errors.push(`${headerOf('email')} "${data.email}" is not a valid email address.`)
   }
 
   return errors
@@ -179,7 +181,7 @@ export const checkResidentsCsv = (text, lists) => {
     const errors = checkRow(data, lists)
     const firstRow = rowNumberByEnrolment[data.enrolment_number]
     if (data.enrolment_number && firstRow) {
-      errors.push(`Enrollment No "${data.enrolment_number}" is repeated from row ${firstRow}.`)
+      errors.push(`${headerOf('enrolment_number')} "${data.enrolment_number}" is repeated from row ${firstRow}.`)
     } else if (data.enrolment_number) {
       rowNumberByEnrolment[data.enrolment_number] = rowNumber
     }

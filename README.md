@@ -10,21 +10,23 @@ The page takes a CSV file, checks every row in the browser, and lists exactly wh
 ### CSV format
 
 - The first row holds the column headers, and every following row is one student.
-- **Enrollment No**, **Name**, **Bhawan Code** and **Room No** are required.
-- Seat, Branch Code, Current Semester, Fee Type, Admission Date, Date of Birth, Email, Mobile No, Address and parents' names and contacts are optional.
-- Header case, spacing and column order do not matter, and unknown columns are ignored with a warning.
+- **Enrollment_NO**, **Name**, **Bhawan_Name** and **Room_No** are required.
+- Seat, Branch_Code, Current_Semester, Fee_Type, Admission_Date, Date_Of_Birth, Email, Mobile_No, Address, Fathers_Name, Fathers_Contact, Mothers_Name and Mothers_Contact are optional.
+- Bhawan_Name takes either the bhawan name (`Rajendra bhawan`) or its code (`rjb`).
+- Headers are matched ignoring case, spaces and underscores, so `Room No` also works.
+- Column order does not matter, and unknown columns are ignored with a warning.
 - Dates are written as DD/MM/YYYY.
 - In Excel, save the sheet with File > Save As > CSV UTF-8 (Comma delimited).
 
-The page shows the full column guide, the valid bhawan codes and fee types, and a downloadable template.
-The columns are defined in `src/components/bulk_register/residents-csv.js`, and the headers also match the aliases of the admin import script.
+The page shows the full column guide, the valid bhawans and fee types, and a downloadable template.
+The columns are defined in `src/components/bulk_register/residents-csv.js`.
 
 ### Checks done in the browser
 
-- Enrollment No is exactly 8 digits and appears only once in the file.
-- Bhawan Code and Branch Code exist in the kernel, using the `hostels` and `branches` lists from the constants API.
-- Room No is at most 10 characters.
-- Current Semester is a whole number of 1 or more, Fee Type is a known fee type, dates are real dates, and Email looks like an email address.
+- Enrollment_NO is exactly 8 digits and appears only once in the file.
+- Bhawan_Name and Branch_Code exist in the kernel, using the `hostels` and `branches` lists from the constants API.
+- Room_No is at most 10 characters.
+- Current_Semester is a whole number of 1 or more, Fee_Type is a known fee type, dates are real dates, and Email looks like an email address.
 
 Run `npx babel-node --presets @babel/preset-env apps/bhawan_app/src/components/bulk_register/residents-csv.check.js` from the `omniport` folder to verify these checks.
 
@@ -65,7 +67,8 @@ The page first sends a dry run, and only after a dry run with no skipped rows ca
 }
 ```
 
-Row keys are the canonical keys of the admin import script, dates are sent as YYYY-MM-DD, and empty optional values are sent as empty strings.
+Row keys are the canonical keys of the admin import script, and `hostel_code` is always the bhawan code even when the sheet used the name.
+Dates are sent as YYYY-MM-DD, and empty optional values are sent as empty strings.
 
 ```json
 {

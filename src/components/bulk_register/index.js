@@ -74,6 +74,10 @@ class BulkRegister extends React.Component {
     })
   }
 
+  removeFile = () => {
+    this.setState(emptyFile)
+  }
+
   submit = (dryRun) => {
     this.setState({ submitting: dryRun ? 'preview' : 'register' })
     this.props.bulkRegisterResidents(
@@ -200,7 +204,17 @@ class BulkRegister extends React.Component {
       <Grid.Column width={16}>
         <Header as='h4'>Bulk Register Students</Header>
         <div styleName='actions'>
-          <Button as='label' htmlFor='bulk-register-file' basic icon='file alternate outline' content={fileName || 'Choose CSV file'} />
+          <Button
+            as='label'
+            htmlFor='bulk-register-file'
+            basic
+            icon='file alternate outline'
+            content={fileName || 'Choose CSV file'}
+            disabled={!!submitting}
+          />
+          {fileName && (
+            <Button basic icon='close' content='Remove file' disabled={!!submitting} onClick={this.removeFile} />
+          )}
           <input
             type='file'
             id='bulk-register-file'
@@ -259,7 +273,7 @@ class BulkRegister extends React.Component {
                     <Table.HeaderCell collapsing>Row</Table.HeaderCell>
                     <Table.HeaderCell collapsing>Enrollment No</Table.HeaderCell>
                     <Table.HeaderCell>Name</Table.HeaderCell>
-                    <Table.HeaderCell collapsing>Bhawan Code</Table.HeaderCell>
+                    <Table.HeaderCell collapsing>Bhawan</Table.HeaderCell>
                     <Table.HeaderCell collapsing>Room No</Table.HeaderCell>
                     <Table.HeaderCell collapsing>Seat</Table.HeaderCell>
                     <Table.HeaderCell>Status</Table.HeaderCell>
@@ -312,7 +326,7 @@ class BulkRegister extends React.Component {
               </Table.Body>
             </Table>
           </div>
-          <Header as='h5'>Bhawan codes</Header>
+          <Header as='h5'>Bhawans</Header>
           <Label.Group size='small'>
             {Object.keys(constants.hostels).map((code) => (
               <Label key={code}>
