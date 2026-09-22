@@ -1,30 +1,25 @@
 import moment from 'moment'
 
-// Limits come from the kernel Student and bhawan Resident models.
+// Limits match the kernel Student model and the backend bulk register serializer.
 const ENROLMENT_NUMBER_PATTERN = /^\d{8}$/
-const ROOM_NO_MAX_LENGTH = 10
+const ROOM_NUMBER_MAX_LENGTH = 10
+const CONTACT_MAX_LENGTH = 15
+const NAME_MAX_LENGTH = 255
 const DATE_FORMATS = ['D/M/YYYY', 'D-M-YYYY', 'YYYY-MM-DD']
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Headers match ignoring case, spaces and underscores, so "Room No" is read as Room_No.
 export const COLUMNS = [
-  { header: 'Enrollment_NO', key: 'enrolment_number', required: true, example: '26114001', note: 'Exactly 8 digits' },
-  { header: 'Name', key: 'full_name', required: true, example: 'Aarav Sharma', note: 'Full name of the student' },
-  { header: 'Bhawan_Name', key: 'hostel_code', required: true, example: 'Rajendra bhawan', note: 'Name or code of a bhawan listed below' },
-  { header: 'Room_No', key: 'room_no', required: true, example: 'A-101', note: `At most ${ROOM_NO_MAX_LENGTH} characters` },
-  { header: 'Seat', key: 'seat', example: 'B', note: 'Bed or seat within the room' },
-  { header: 'Branch_Code', key: 'branch_code', example: 'CSE', note: 'Needed for students who are not in the kernel yet' },
-  { header: 'Current_Semester', key: 'current_semester', example: '1', note: 'Whole number, 1 if left empty' },
-  { header: 'Fee_Type', key: 'fee_type', example: 'LIVING', note: 'One of the fee types listed below, LIVING if left empty' },
+  { header: 'Enrollment_NO', key: 'enrolment_number', required: true, example: '21114002', note: 'Exactly 8 digits, and the student must already be on Channeli' },
+  { header: 'Room_No', key: 'room_no', required: true, example: 'A-101', note: `With the seat, at most ${ROOM_NUMBER_MAX_LENGTH} characters` },
+  { header: 'Seat', key: 'seat', example: 'B', note: 'Stored with the room, as A-101-B' },
+  { header: 'Fee_Type', key: 'fee_type', example: 'LIVING', note: 'One of the fee types listed below, LIVING for a new resident if left empty' },
   { header: 'Admission_Date', key: 'admission_date', example: '20/07/2026', note: 'DD/MM/YYYY', date: true },
-  { header: 'Date_Of_Birth', key: 'dob', example: '14/03/2008', note: 'DD/MM/YYYY', date: true },
-  { header: 'Email', key: 'email', example: 'aarav_s@iitr.ac.in', note: '' },
-  { header: 'Mobile_No', key: 'mobile_no', example: '9876543210', note: '' },
+  { header: 'Mobile_No', key: 'mobile_no', example: '9876543210', note: `At most ${CONTACT_MAX_LENGTH} characters`, maxLength: CONTACT_MAX_LENGTH },
   { header: 'Address', key: 'address', example: '12 MG Road, Jaipur', note: 'Home address for bhawan records' },
-  { header: 'Fathers_Name', key: 'father_name', example: 'Rakesh Sharma', note: '' },
-  { header: 'Fathers_Contact', key: 'father_contact', example: '9876500000', note: '' },
-  { header: 'Mothers_Name', key: 'mother_name', example: 'Sunita Sharma', note: '' },
-  { header: 'Mothers_Contact', key: 'mother_contact', example: '9876511111', note: '' }
+  { header: 'Fathers_Name', key: 'father_name', example: 'Rakesh Sharma', note: '', maxLength: NAME_MAX_LENGTH },
+  { header: 'Fathers_Contact', key: 'father_contact', example: '9876500000', note: `At most ${CONTACT_MAX_LENGTH} characters`, maxLength: CONTACT_MAX_LENGTH },
+  { header: 'Mothers_Name', key: 'mother_name', example: 'Sunita Sharma', note: '', maxLength: NAME_MAX_LENGTH },
+  { header: 'Mothers_Contact', key: 'mother_contact', example: '9876511111', note: `At most ${CONTACT_MAX_LENGTH} characters`, maxLength: CONTACT_MAX_LENGTH }
 ]
 
 const headerOf = (key) => COLUMNS.find((column) => column.key === key).header
@@ -102,7 +97,7 @@ const readHeaders = (headerRecord) => {
 }
 
 // Rewrites data to the canonical values the API expects and returns what is wrong with it.
-const checkRow = (data, { hostels, branches, feeTypes }) => {
+const checkRow = (data, { feeTypes }) => {
   const errors = COLUMNS
     .filter((column) => column.required && !data[column.key])
     .map((column) => `${column.header} is empty.`)
@@ -112,25 +107,17 @@ const checkRow = (data, { hostels, branches, feeTypes }) => {
     errors.push(`${headerOf('enrolment_number')} "${data.enrolment_number}" must be exactly 8 digits.`)
   }
 
-  if (data.hostel_code) {
-    const code = findKey(hostels, data.hostel_code) || findKeyByLabel(hostels, data.hostel_code)
-    if (code) data.hostel_code = code
-    else errors.push(`${headerOf('hostel_code')} "${data.hostel_code}" is not a bhawan name or code in the kernel.`)
+  // The backend stores room and seat as one "room-seat" value.
+  const roomNumber = [data.room_no, data.seat].filter(Boolean).join('-')
+  if (roomNumber.length > ROOM_NUMBER_MAX_LENGTH) {
+    errors.push(data.seat
+      ? `${headerOf('room_no')} and ${headerOf('seat')} are stored as "${roomNumber}", which is longer than ${ROOM_NUMBER_MAX_LENGTH} characters.`
+      : `${headerOf('room_no')} "${roomNumber}" is longer than ${ROOM_NUMBER_MAX_LENGTH} characters.`)
   }
 
-  if (data.room_no.length > ROOM_NO_MAX_LENGTH) {
-    errors.push(`${headerOf('room_no')} "${data.room_no}" is longer than ${ROOM_NO_MAX_LENGTH} characters.`)
-  }
-
-  if (data.branch_code) {
-    const code = findKey(branches, data.branch_code)
-    if (code) data.branch_code = code
-    else errors.push(`${headerOf('branch_code')} "${data.branch_code}" does not exist in the kernel.`)
-  }
-
-  if (data.current_semester && !(/^\d+$/.test(data.current_semester) && Number(data.current_semester) >= 1)) {
-    errors.push(`${headerOf('current_semester')} "${data.current_semester}" must be a whole number of 1 or more.`)
-  }
+  COLUMNS.filter((column) => column.maxLength && data[column.key].length > column.maxLength).forEach(({ header, key, maxLength }) => {
+    errors.push(`${header} "${data[key]}" is longer than ${maxLength} characters.`)
+  })
 
   if (data.fee_type) {
     const code = findKey(feeTypes, data.fee_type) || findKeyByLabel(feeTypes, data.fee_type)
@@ -145,15 +132,11 @@ const checkRow = (data, { hostels, branches, feeTypes }) => {
     else errors.push(`${header} "${data[key]}" is not a valid DD/MM/YYYY date.`)
   })
 
-  if (data.email && !EMAIL_PATTERN.test(data.email)) {
-    errors.push(`${headerOf('email')} "${data.email}" is not a valid email address.`)
-  }
-
   return errors
 }
 
 /**
- * Parses a residents CSV and checks every row against the kernel lists from the constants API.
+ * Parses a residents CSV and checks every row against the fee types from the constants API.
  * Row numbers match the spreadsheet, so row 2 is the first student.
  */
 export const checkResidentsCsv = (text, lists) => {

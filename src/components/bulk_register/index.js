@@ -68,11 +68,7 @@ class BulkRegister extends React.Component {
         this.setState({
           ...emptyFile,
           fileName: file.name,
-          ...checkResidentsCsv(text, {
-            hostels: constants.hostels,
-            branches: constants.branches,
-            feeTypes: constants.statuses.FEE_TYPES
-          })
+          ...checkResidentsCsv(text, { feeTypes: constants.statuses.FEE_TYPES })
         })
       },
       () => {
@@ -90,12 +86,13 @@ class BulkRegister extends React.Component {
   }
 
   submit = (dryRun) => {
+    const { activeHostel } = this.props
     this.setState({ submitting: dryRun ? 'preview' : 'register' })
     this.props.bulkRegisterResidents(
-      bulkRegisterResidentsUrl(this.props.activeHostel),
+      bulkRegisterResidentsUrl(activeHostel),
       {
         dry_run: dryRun,
-        rows: this.state.rows.map((row) => ({ row_number: row.rowNumber, ...row.data }))
+        rows: this.state.rows.map((row) => ({ row_number: row.rowNumber, hostel_code: activeHostel, ...row.data }))
       },
       this.successCallBack,
       this.errCallBack
@@ -133,13 +130,13 @@ class BulkRegister extends React.Component {
     })
   }
 
-  renderSummary = (rowsWithErrors) => {
+  renderSummary = (invalidRows) => {
     const { rows, report } = this.state
-    if (rowsWithErrors.length > 0 && !report) {
+    if (invalidRows.length > 0) {
       return (
         <Message
           negative
-          header={`${rowsWithErrors.length} of ${rows.length} rows need fixing`}
+          header={`${invalidRows.length} of ${rows.length} rows need fixing`}
           content='They are listed below. Fix them in your sheet, save it as CSV again and choose the file again.'
         />
       )
@@ -154,21 +151,15 @@ class BulkRegister extends React.Component {
       )
     }
     const { created, updated, existing, skipped } = report.summary
-    if (report.dry_run && skipped > 0) {
-      return (
-        <Message
-          negative
-          header={`The server found problems in ${skipped} of ${rows.length} rows`}
-          content='They are listed below. Fix them in your sheet, save it as CSV again and choose the file again.'
-        />
-      )
-    }
     if (report.dry_run) {
       return (
         <Message
-          info
-          header={`${created} will be created and ${updated} will be updated`}
-          content='Nothing has been saved yet. Confirm to register these students.'
+          info={skipped === 0}
+          warning={skipped > 0}
+          header={`${created} will be created, ${updated} updated, ${existing} unchanged and ${skipped} skipped`}
+          content={skipped > 0
+            ? 'Skipped rows are marked below with the reason and are left out when you confirm. Nothing has been saved yet.'
+            : 'Nothing has been saved yet. Confirm to register these students.'}
         />
       )
     }
@@ -197,7 +188,7 @@ class BulkRegister extends React.Component {
   }
 
   render () {
-    const { constants } = this.props
+    const { constants, activeHostel } = this.props
     const { fileName, fileErrors, ignoredHeaders, rows, report, submitting } = this.state
 
     const reportRows = {}
@@ -206,14 +197,17 @@ class BulkRegister extends React.Component {
     }
     const hasProblem = (row) =>
       row.errors.length > 0 || (reportRows[row.rowNumber] && reportRows[row.rowNumber].status === 'error')
-    const rowsWithErrors = rows.filter(hasProblem)
-    const visibleRows = rowsWithErrors.length > 0 ? rowsWithErrors : rows
-    const previewed = report && report.dry_run && report.summary.skipped === 0
-    const canSubmit = rowsWithErrors.length === 0 && (!report || report.dry_run)
+    // Browser errors block the upload; rows the server skips are only left out of the real run.
+    const invalidRows = rows.filter((row) => row.errors.length > 0)
+    const visibleRows = invalidRows.length > 0 ? invalidRows : rows
+    const toRegister = report ? report.summary.created + report.summary.updated : rows.length
+    const previewed = report && report.dry_run && toRegister > 0
+    const canSubmit = invalidRows.length === 0 && (!report || report.dry_run)
 
     return (
       <Grid.Column width={16}>
         <Header as='h4'>Bulk Register Students</Header>
+        <p>Students are registered into <strong>{constants.hostels[activeHostel]}</strong>.</p>
         <div styleName='actions'>
           <Button
             basic
@@ -248,14 +242,14 @@ class BulkRegister extends React.Component {
         {ignoredHeaders.length > 0 && (
           <Message
             warning
-            header='These columns are not recognised and will be ignored'
+            header='These columns are not used and will be ignored'
             content={ignoredHeaders.join(', ')}
           />
         )}
 
         {rows.length > 0 && (
           <React.Fragment>
-            {this.renderSummary(rowsWithErrors)}
+            {this.renderSummary(invalidRows)}
             {canSubmit && (
               <div styleName='actions'>
                 <Button
@@ -272,7 +266,7 @@ class BulkRegister extends React.Component {
                   disabled={!previewed || !!submitting}
                   onClick={() => this.submit(false)}
                 >
-                  Confirm and register {rows.length} students
+                  Confirm and register {toRegister} students
                 </Button>
               </div>
             )}
@@ -282,8 +276,6 @@ class BulkRegister extends React.Component {
                   <Table.Row>
                     <Table.HeaderCell collapsing>Row</Table.HeaderCell>
                     <Table.HeaderCell collapsing>Enrollment No</Table.HeaderCell>
-                    <Table.HeaderCell>Name</Table.HeaderCell>
-                    <Table.HeaderCell collapsing>Bhawan</Table.HeaderCell>
                     <Table.HeaderCell collapsing>Room No</Table.HeaderCell>
                     <Table.HeaderCell collapsing>Seat</Table.HeaderCell>
                     <Table.HeaderCell>Status</Table.HeaderCell>
@@ -294,8 +286,6 @@ class BulkRegister extends React.Component {
                     <Table.Row key={row.rowNumber} negative={hasProblem(row)}>
                       <Table.Cell>{row.rowNumber}</Table.Cell>
                       <Table.Cell>{row.data.enrolment_number}</Table.Cell>
-                      <Table.Cell>{row.data.full_name}</Table.Cell>
-                      <Table.Cell>{row.data.hostel_code}</Table.Cell>
                       <Table.Cell>{row.data.room_no}</Table.Cell>
                       <Table.Cell>{row.data.seat}</Table.Cell>
                       <Table.Cell>{this.renderStatus(row, reportRows[row.rowNumber])}</Table.Cell>
@@ -312,6 +302,7 @@ class BulkRegister extends React.Component {
           <p>
             Put one student per row with the column headers below in the first row.
             Column order does not matter, and optional columns can be left out.
+            An empty cell keeps what is already stored for that student.
             In Excel, save the sheet with File &gt; Save As and pick CSV UTF-8 (Comma delimited).
           </p>
           <div styleName='table-overflow'>
@@ -336,15 +327,6 @@ class BulkRegister extends React.Component {
               </Table.Body>
             </Table>
           </div>
-          <Header as='h5'>Bhawans</Header>
-          <Label.Group size='small'>
-            {Object.keys(constants.hostels).map((code) => (
-              <Label key={code}>
-                {code}
-                <Label.Detail>{constants.hostels[code]}</Label.Detail>
-              </Label>
-            ))}
-          </Label.Group>
           <Header as='h5'>Fee types</Header>
           <Label.Group size='small'>
             {Object.values(constants.statuses.FEE_TYPES).map((label) => (
