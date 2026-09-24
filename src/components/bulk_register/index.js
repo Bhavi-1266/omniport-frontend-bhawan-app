@@ -34,7 +34,8 @@ const emptyFile = {
   fileErrors: [],
   ignoredHeaders: [],
   rows: [],
-  report: null
+  report: null,
+  reportHostel: null
 }
 
 class BulkRegister extends React.Component {
@@ -44,13 +45,6 @@ class BulkRegister extends React.Component {
   }
 
   fileInput = React.createRef()
-
-  componentDidUpdate (prevProps) {
-    // A preview is only valid for the bhawan it was made for.
-    if (prevProps.activeHostel !== this.props.activeHostel && this.state.report) {
-      this.setState({ report: null })
-    }
-  }
 
   handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -101,14 +95,15 @@ class BulkRegister extends React.Component {
         dry_run: dryRun,
         rows: this.state.rows.map((row) => ({ row_number: row.rowNumber, hostel_code: activeHostel, ...row.data }))
       },
-      this.successCallBack,
+      (res) => this.successCallBack(res, activeHostel),
       this.errCallBack
     )
   }
 
-  successCallBack = (res) => {
+  successCallBack = (res, hostel) => {
     this.setState({
       report: res.data,
+      reportHostel: hostel,
       submitting: ''
     })
     if (!res.data.dry_run) {
@@ -137,8 +132,8 @@ class BulkRegister extends React.Component {
     })
   }
 
-  renderSummary = (invalidRows) => {
-    const { rows, report } = this.state
+  renderSummary = (invalidRows, report) => {
+    const { rows } = this.state
     if (invalidRows.length > 0) {
       return (
         <Message
@@ -196,7 +191,9 @@ class BulkRegister extends React.Component {
 
   render () {
     const { constants, activeHostel } = this.props
-    const { fileName, fileErrors, ignoredHeaders, rows, report, submitting } = this.state
+    const { fileName, fileErrors, ignoredHeaders, rows, reportHostel, submitting } = this.state
+    // A report only applies to the bhawan it was made for.
+    const report = reportHostel === activeHostel ? this.state.report : null
 
     const reportRows = {}
     if (report) {
@@ -256,7 +253,7 @@ class BulkRegister extends React.Component {
 
         {rows.length > 0 && (
           <React.Fragment>
-            {this.renderSummary(invalidRows)}
+            {this.renderSummary(invalidRows, report)}
             {canSubmit && (
               <div styleName='actions'>
                 <Button
