@@ -45,6 +45,13 @@ class BulkRegister extends React.Component {
 
   fileInput = React.createRef()
 
+  componentDidUpdate (prevProps) {
+    // A preview is only valid for the bhawan it was made for.
+    if (prevProps.activeHostel !== this.props.activeHostel && this.state.report) {
+      this.setState({ report: null })
+    }
+  }
+
   handleFileChange = (e) => {
     const file = e.target.files[0]
     // Clearing the input lets the same file be picked again after it is fixed.

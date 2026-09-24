@@ -320,7 +320,7 @@ class Nav extends Component {
               color='blue'
               styleName='navCss.navColor'
               active={activeSubGroup == 'bulk_register'}
-              onClick={() => this.handleGroupClick('bulk_register', '/bhawan_app/bulk_registration')}
+              onClick={() => this.handleGroupClick('bulk_register', bulkRegistrationUrl())}
             >
               Bulk Register Students
             </Menu.Item>
