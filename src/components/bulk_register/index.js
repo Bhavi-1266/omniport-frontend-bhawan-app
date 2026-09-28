@@ -13,6 +13,7 @@ import {
 } from 'semantic-ui-react'
 
 import { bulkRegisterResidents } from '../../actions/bulk-register'
+import RegistrationTabs from '../registration_tabs'
 import { bulkRegisterResidentsUrl } from '../../urls'
 import { COLUMNS, TEMPLATE_CSV, checkResidentsCsv } from './residents-csv'
 
@@ -210,7 +211,7 @@ class BulkRegister extends React.Component {
 
     return (
       <Grid.Column width={16}>
-        <Header as='h4'>Bulk Register Students</Header>
+        <RegistrationTabs active='bulk' />
         <p>Students are registered into <strong>{constants.hostels[activeHostel]}</strong>.</p>
         <div styleName='actions'>
           <Button

@@ -99,7 +99,7 @@ class Nav extends Component {
       }
       case bulkRegistrationUrl(): {
         this.setState({
-          activeSubGroup: 'bulk_register'
+          activeSubGroup: 'register'
         })
         return
       }
@@ -313,16 +313,6 @@ class Nav extends Component {
               onClick={() => this.handleGroupClick('register', '/bhawan_app/registration')}
             >
               Register New Student
-            </Menu.Item>
-            <Menu.Item
-              size='mini'
-              name='bulk_register'
-              color='blue'
-              styleName='navCss.navColor'
-              active={activeSubGroup == 'bulk_register'}
-              onClick={() => this.handleGroupClick('bulk_register', bulkRegistrationUrl())}
-            >
-              Bulk Register Students
             </Menu.Item>
             <Menu.Item
               size='mini'

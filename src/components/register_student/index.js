@@ -3,6 +3,7 @@ import { connect } from 'react-redux'
 import { toast } from 'react-semantic-toasts'
 import moment from 'moment'
 
+import RegistrationTabs from '../registration_tabs'
 import {
   Button,
   Form,
@@ -501,6 +502,8 @@ class RegisterStudent extends React.Component {
     }
 
     return (
+      <React.Fragment>
+      <RegistrationTabs active='single' />
       <Grid container centered>
         <Grid.Column width={6} centered>
           <Container centered>
@@ -823,6 +826,7 @@ class RegisterStudent extends React.Component {
           </Container>
         </Grid.Column>
       </Grid>
+      </React.Fragment>
     )
   }
 }
