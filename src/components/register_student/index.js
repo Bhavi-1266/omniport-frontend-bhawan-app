@@ -6,67 +6,82 @@ import moment from 'moment'
 import RegistrationTabs from '../registration_tabs'
 import {
   Button,
-  Form,
-  Input,
-  Image,
-  Grid,
-  Container,
+  Confirm,
+  Divider,
   Dropdown,
-  Checkbox
+  Form,
+  Grid,
+  Header,
+  Image,
+  Message,
+  Segment
 } from 'semantic-ui-react'
 
 import { searchPerson } from '../../actions/searchPerson'
 import { searchResident } from '../../actions/search-resident'
-import { addResident, deregister, editResident } from '../../actions/residents'
+import { addResident, deregister, editResident, fetchPreviousRecords } from '../../actions/residents'
 
 import {
   yellowPagesStudentUrl,
-  residentSearchUrl, 
-  residentUrl, 
-  deregisterUrl,
-  markInsideUrl,
-  markOutUrl,
+  residentSearchUrl,
+  residentUrl,
+  deregisterUrl
 } from '../../urls'
 
 import './index.css'
+
+const PLACEHOLDER_PICTURE = 'https://react.semantic-ui.com/images/wireframe/square-image.png'
+const DATE_TIME_FORMAT = 'YYYY-MM-DDTHH:mm:ss'
+
+const emptyStudent = {
+  selected: '',
+  name: '',
+  roomNo: '',
+  startDate: '',
+  emailAddress: '',
+  currentYear: '',
+  currentSemester: '',
+  program: '',
+  department: '',
+  phoneNumber: '',
+  insideCampus: false,
+  feeStatus: '',
+  dateOfBirth: '',
+  displayPicture: '',
+  address: '',
+  addressBhawan: '',
+  admissionDate: '',
+  contactNumberAsBhawan: '',
+  state: '',
+  city: '',
+  country: '',
+  postalCode: '',
+  fathersName: '',
+  fathersContact: '',
+  mothersName: '',
+  mothersContact: '',
+  isResident: false,
+  currentRoom: '',
+  currentStart: '',
+  previousRecords: [],
+  loading: false
+}
+
+// Channeli values can arrive as lists, so join them for display
+const asText = (value) => (Array.isArray(value) ? value.filter(Boolean).join(', ') : value)
+
+const formatDate = (value) => (value ? moment(value).format('D MMM YYYY') : '')
 
 class RegisterStudent extends React.Component {
   constructor (props) {
     super(props)
     this.state = {
+      ...emptyStudent,
       options: [],
-      selected: '',
-      enrollmentNo: '',
-      name: '',
-      roomNo: '',
-      startDate: '',
-      emailAddress : '',
-      currentYear : '',
-      currentSemester : '',
-      program : '',
-      department : '',
-      phoneNumber : '',
-      insideCampus: '',
-      feeStatus: '',
-      dateOfBirth :'',
-      displayPicture: '',
-      loading: false,
       registerLoading: false,
       deregisterLoading: false,
       editLoading: false,
-      address: '',
-      addressBhawan:'',
-      admissionDate:'',
-      contactNumberAsBhawan:'',
-      state: '',
-      city: '',
-      country: '',
-      postalCode: '',
-      fathersName: '',
-      fathersContact: '',
-      mothersName: '',
-      mothersContact: '',
-      isResident: false,
+      confirmOpen: false
     }
     this.delayedCallback = _.debounce(this.ajaxCall, 300)
   }
@@ -81,12 +96,12 @@ class RegisterStudent extends React.Component {
         person.person.roles[0].data.branch &&
         person.person.roles[0].data.enrolmentNumber
       ) {
-        text = `${person.person.roles[0].data.enrolmentNumber}`
+        text = `${person.person.roles[0].data.enrolmentNumber} · ${person.person.fullName}`
       }
       return { key: index, text: text, value: person }
     })
     this.setState({
-      options: options,
+      options: options
     })
   }
 
@@ -99,58 +114,84 @@ class RegisterStudent extends React.Component {
 
   onSearchChange = (e) => {
     e.persist()
-    this.setState({ [e.target.name]: e.target.value })
     this.delayedCallback(e)
   }
 
-  searchResidentSuccessCallBack = (res) => {
+  onChange = (e, { value }) => {
+    this.loadStudent(value)
+  }
+
+  isSelected = (enrolmentNumber) =>
+    this.state.selected && this.state.selected.enrolmentNumber === enrolmentNumber
+
+  loadStudent = (student) => {
+    const { activeHostel } = this.props
+    this.setState({
+      ...emptyStudent,
+      selected: student,
+      name: student.person.fullName,
+      loading: true
+    })
+    this.props.searchResident(
+      residentSearchUrl(activeHostel, student.enrolmentNumber),
+      (res) => this.searchResidentSuccessCallBack(res, student.enrolmentNumber)
+    )
+    this.props.fetchPreviousRecords(
+      `${residentUrl(activeHostel)}${student.enrolmentNumber}/previous_records/`,
+      (res) => {
+        if (this.isSelected(student.enrolmentNumber)) {
+          this.setState({ previousRecords: res.data })
+        }
+      },
+      () => {}
+    )
+  }
+
+  searchResidentSuccessCallBack = (res, enrolmentNumber) => {
+    // Ignore a late response for a student who is no longer selected
+    if (!this.isSelected(enrolmentNumber)) {
+      return
+    }
     this.setState({
       loading: false,
-      roomNo: res.roomNumber,
-      startDate: moment(res.startDate).format('YYYY-MM-DDThh:mm:ss'),
-      emailAddress : res.emailAddress,
-      currentYear : res.currentYear,
-      currentSemester : res.currentSemester,
-      program : res.program,
+      roomNo: res.roomNumber || '',
+      startDate: moment(res.startDate).format(DATE_TIME_FORMAT),
+      emailAddress: res.emailAddress,
+      currentYear: res.currentYear,
+      currentSemester: res.currentSemester,
+      program: res.program,
       department: res.department,
-      phoneNumber : res.phoneNumber,
-      dateOfBirth : res.dateOfBirth,
-      displayPicture : res.displayPicture,
-      havingComputer: res.havingComputer,
-      insideCampus: res.isLivingInCampus,
-      feeStatus: res.feeType,
+      phoneNumber: res.phoneNumber,
+      dateOfBirth: res.dateOfBirth,
+      displayPicture: res.displayPicture,
+      insideCampus: !!res.isLivingInCampus,
+      feeStatus: res.feeType || '',
       address: res.address,
-      addressBhawan:res.addressBhawan,
-      admissionDate: moment(res.admissionDate).format('YYYY-MM-DDThh:mm:ss'),
-      contactNumberAsBhawan: res.contactNumberAsBhawan,
+      addressBhawan: res.addressBhawan || '',
+      admissionDate: moment(res.admissionDate).format(DATE_TIME_FORMAT),
+      contactNumberAsBhawan: res.contactNumberAsBhawan || '',
       state: res.state,
       city: res.city,
       postalCode: res.postalCode,
       country: res.country,
-      fathersName: res.fathersName,
-      fathersContact: res.fathersContact,
-      mothersName: res.mothersName,
-      mothersContact: res.mothersContact,
+      fathersName: res.fathersName || '',
+      fathersContact: res.fathersContact || '',
+      mothersName: res.mothersName || '',
+      mothersContact: res.mothersContact || '',
       isResident: res.isResident,
+      currentRoom: res.isResident ? res.roomNumber : '',
+      currentStart: res.isResident ? res.startDate : ''
     })
   }
 
-  onChange = (e, data) => {
-    if (data.name == "enrollment") {
-      this.setState({
-        roomNo: '',
-        feeStatus: '',
-      })
+  clearStudent = () => {
+    this.setState({ ...emptyStudent, options: [] })
+  }
+
+  reloadStudent = () => {
+    if (this.state.selected) {
+      this.loadStudent(this.state.selected)
     }
-    this.setState(
-      { selected: data.value,
-        name: data.value.person.fullName,
-        loading: true,
-      })
-    this.props.searchResident(
-      residentSearchUrl(this.props.activeHostel, data.value.enrolmentNumber),
-      this.searchResidentSuccessCallBack
-    )
   }
 
   fieldsChange = (event, { name, value }) => {
@@ -159,63 +200,28 @@ class RegisterStudent extends React.Component {
     }
   }
 
-  checkedChange = (event, {name, checked}) => {
+  checkedChange = (event, { checked }) => {
     this.setState({
-      insideCampus:checked,
+      insideCampus: checked
     })
   }
 
   residentSuccessCallBack = (res) => {
-    this.setState({
-      errMessage: '',
-      registerLoading: false,
-      roomNo: '',
-      startDate: '',
-      enrollmentNo: '',
-      feeStatus: '',
-      insideCampus: '',
-      emailAddress : '',
-      currentYear : '',
-      currentSemester : '',
-      program : '',
-      department : '',
-      phoneNumber : '',
-      dateOfBirth : '',
-      displayPicture : '',
-      successMessage : 'Student Registered',
-      address: '',
-      addressBhawan:'',
-      admissionDate:'',
-      contactNumberAsBhawan:'',
-      city: '',
-      postalCode: '',
-      country: '',
-      fathersName: '',
-      fathersContact: '',
-      mothersName: '',
-      mothersContact: '',
-      // The selected student stays selected and is now a resident, so keep
-      // Register blocked until another student is picked
-      isResident: true
-    })
+    this.setState({ registerLoading: false })
     toast({
       type: 'success',
       title: 'Student Registered Succesfully',
       animation: 'fade up',
       icon: 'smile outline',
-      time: 4000,
+      time: 4000
     })
+    this.reloadStudent()
   }
 
   residentErrCallBack = (err) => {
     // 409 means the backend found an active registration in this bhawan
     const isDuplicate = err.response && err.response.status === 409
-    this.setState({
-      errMessage: 'Failed to register student',
-      successMessage: '',
-      registerLoading: false,
-      isResident: isDuplicate || this.state.isResident,
-    })
+    this.setState({ registerLoading: false })
     toast({
       type: 'error',
       title: isDuplicate
@@ -223,107 +229,41 @@ class RegisterStudent extends React.Component {
         : 'Unable to register Student',
       animation: 'fade up',
       icon: 'frown outline',
-      time: 4000,
+      time: 4000
     })
+    if (isDuplicate) {
+      this.reloadStudent()
+    }
   }
+
   residentEditSuccessCallBack = (res) => {
-    this.setState({
-      errMessage: '',
-      editLoading: false,
-      roomNo: '',
-      startDate: '',
-      enrollmentNo: '',
-      feeStatus: '',
-      insideCampus: '',
-      emailAddress : '',
-      currentYear : '',
-      currentSemester : '',
-      program : '',
-      department : '',
-      phoneNumber : '',
-      dateOfBirth : '',
-      displayPicture : '',
-      successMessage : 'Student Edited Succesfully',
-      address: '',
-      city: '',
-      postalCode: '',
-      country: '',
-      fathersName: '',
-      addressBhawan: '',
-      admissionDate: '',
-      contactNumberAsBhawan:'',
-      fathersContact: '',
-      mothersName: '',
-      mothersContact: '',
-    })
+    this.setState({ editLoading: false })
     toast({
       type: 'success',
       title: 'Student Edited Succesfully',
       animation: 'fade up',
       icon: 'smile outline',
-      time: 4000,
+      time: 4000
     })
+    this.reloadStudent()
   }
 
   residentEditErrCallBack = (err) => {
-    this.setState({
-      errMessage: 'Failed to edit student',
-      successMessage: '',
-      editLoading: false,
-    })
+    this.setState({ editLoading: false })
     toast({
       type: 'error',
-      title: 'Unable to register Student',
+      title: 'Unable to edit Student',
       animation: 'fade up',
       icon: 'frown outline',
-      time: 4000,
+      time: 4000
     })
-  }
-
-  markSuccessCallBack = (res) => {
-    toast({
-      type: 'success',
-      title: res.data,
-      animation: 'fade up',
-      icon: 'smile outline',
-      time: 4000,
-    })
-  }
-
-  markFailureCallBack = (err) => {
-    toast({
-      type: 'error',
-      title: "Unable to edit student please try again",
-      animation: 'fade up',
-      icon: 'frown outline',
-      time: 4000,
-    })
-  }
-
-  markInCampus = () => {
-    let url = markInsideUrl(this.props.activeHostel, this.state.selected.person.id)
-    
-    this.props.markResident(
-      url,
-      this.markSuccessCallBack,
-      this.markFailureCallBack
-    )
-  }
-
-  markOutCampus = () => {
-    let url = markOutUrl(this.props.activeHostel, this.state.selected.person.id)
-    
-    this.props.markResident(
-      url,
-      this.markSuccessCallBack,
-      this.markFailureCallBack
-    )
   }
 
   deRegisterStudent = () => {
     let url = deregisterUrl(this.props.activeHostel, this.state.selected.person.id)
     this.setState({
-      deregisterLoading: true,
+      confirmOpen: false,
+      deregisterLoading: true
     })
     this.props.deregister(
       url,
@@ -333,84 +273,30 @@ class RegisterStudent extends React.Component {
   }
 
   deregisterSuccessCallBack = (res) => {
-    this.setState({
-      deregisterLoading: false,
-      isResident: false,
-    })
+    this.setState({ deregisterLoading: false })
     toast({
       type: 'success',
       title: res.data,
       animation: 'fade up',
       icon: 'smile outline',
-      time: 4000,
+      time: 4000
     })
+    this.reloadStudent()
   }
 
   deregisterFailureCallBack = (err) => {
-    this.setState({
-      deregisterLoading: false,
-    })
+    this.setState({ deregisterLoading: false })
     toast({
       type: 'error',
-      title: "Unable to register student please try again",
+      title: 'Unable to deregister student please try again',
       animation: 'fade up',
       icon: 'frown outline',
-      time: 4000,
+      time: 4000
     })
   }
 
-  registerStudent = () => {
-    if (this.state.isResident) {
-      toast({
-        type: 'error',
-        title: 'Student is already registered in this bhawan',
-        animation: 'fade up',
-        icon: 'frown outline',
-        time: 4000,
-      })
-      return
-    }
+  formData = () => {
     const {
-      selected,
-      roomNo,
-      fathersName,
-      fathersContact,
-      mothersName,
-      mothersContact,
-      insideCampus,
-      feeStatus,
-      startDate,
-      addressBhawan,
-      admissionDate,
-      contactNumberAsBhawan,
-    } = this.state
-    let data = {
-      "person" : selected.person.id,
-      "room_number" : roomNo,
-      "start_date" : startDate,
-      "is_living_in_campus" : insideCampus,
-      "fee_type" : feeStatus,
-      "fathers_name": fathersName,
-      "mothers_name": mothersName,
-      "fathers_contact": fathersContact,
-      "mothers_contact": mothersContact,
-      "address_bhawan":addressBhawan,
-      "admission_date":admissionDate,
-      "contact_number_as_bhawan":contactNumberAsBhawan,
-    }
-    this.setState({
-      registerLoading: true
-    })
-    this.props.addResident(
-      data,
-      residentUrl(this.props.activeHostel),
-      this.residentSuccessCallBack,
-      this.residentErrCallBack
-    )
-  }
-  editStudent = () => {
-    const {
-      selected,
       roomNo,
       fathersName,
       fathersContact,
@@ -423,413 +309,337 @@ class RegisterStudent extends React.Component {
       admissionDate,
       contactNumberAsBhawan
     } = this.state
-    let data = {
-      "room_number" : roomNo,
-      "start_date" : startDate,
-      "is_living_in_campus" : insideCampus,
-      "fee_type" : feeStatus,
-      "fathers_name": fathersName,
-      "mothers_name": mothersName,
-      "fathers_contact": fathersContact,
-      "mothers_contact": mothersContact,
-      "address_bhawan":addressBhawan,
-      "admission_date":admissionDate,
-      "contact_number_as_bhawan":contactNumberAsBhawan
+    return {
+      'room_number': roomNo,
+      'start_date': startDate,
+      'is_living_in_campus': !!insideCampus,
+      'fee_type': feeStatus,
+      'fathers_name': fathersName,
+      'mothers_name': mothersName,
+      'fathers_contact': fathersContact,
+      'mothers_contact': mothersContact,
+      'address_bhawan': addressBhawan,
+      'admission_date': admissionDate,
+      'contact_number_as_bhawan': contactNumberAsBhawan
     }
+  }
+
+  registerStudent = () => {
+    if (this.state.isResident) {
+      toast({
+        type: 'error',
+        title: 'Student is already registered in this bhawan',
+        animation: 'fade up',
+        icon: 'frown outline',
+        time: 4000
+      })
+      return
+    }
+    this.setState({
+      registerLoading: true
+    })
+    this.props.addResident(
+      { person: this.state.selected.person.id, ...this.formData() },
+      residentUrl(this.props.activeHostel),
+      this.residentSuccessCallBack,
+      this.residentErrCallBack
+    )
+  }
+
+  editStudent = () => {
     this.setState({
       editLoading: true
     })
     this.props.editResident(
-      data,
-      `${residentUrl(this.props.activeHostel)}${selected.enrolmentNumber}/`,
+      this.formData(),
+      `${residentUrl(this.props.activeHostel)}${this.state.selected.enrolmentNumber}/`,
       this.residentEditSuccessCallBack,
       this.residentEditErrCallBack
     )
   }
 
-  toggle = () =>
-      this.setState((prevState) =>
-      ({ havingComputer: !prevState.havingComputer }
-        )
+  // The student's residency decides which action the form offers
+  getStatus = () => {
+    const { selected, loading, isResident, previousRecords } = this.state
+    if (!selected) {
+      return { key: 'none' }
+    }
+    if (loading) {
+      return { key: 'loading' }
+    }
+    if (isResident) {
+      return { key: 'here' }
+    }
+    const elsewhere = previousRecords.find(
+      (record) => !record.endDate && record.hostel !== this.props.activeHostel
     )
+    if (elsewhere) {
+      return { key: 'elsewhere', record: elsewhere }
+    }
+    return { key: 'new' }
+  }
 
-  render () {
+  renderStatus = (status, hostelName) => {
+    const { constants } = this.props
+    const { currentRoom, currentStart } = this.state
+    switch (status.key) {
+      case 'here':
+        return (
+          <Message positive size='small'>
+            <Message.Header>Resident of {hostelName}</Message.Header>
+            <p>Room {currentRoom}{currentStart && ` · since ${formatDate(currentStart)}`}</p>
+          </Message>
+        )
+      case 'elsewhere':
+        return (
+          <Message warning size='small'>
+            <Message.Header>Lives in {constants.hostels[status.record.hostel] || status.record.hostel}</Message.Header>
+            <p>Since {formatDate(status.record.startDate)}. Registering here ends that residency today.</p>
+          </Message>
+        )
+      case 'new':
+        return (
+          <Message info size='small'>
+            <Message.Header>Not registered in any bhawan</Message.Header>
+          </Message>
+        )
+      default:
+        return null
+    }
+  }
+
+  renderStudentCard = (status, hostelName) => {
+    const { constants } = this.props
     const {
       selected,
-      options,
       name,
-      roomNo,
-      startDate,
-      emailAddress,
-      currentYear,
-      currentSemester,
-      program,
-      department,
-      phoneNumber,
-      dateOfBirth,
       displayPicture,
       loading,
+      program,
+      department,
+      currentYear,
+      currentSemester,
+      emailAddress,
+      phoneNumber,
+      dateOfBirth,
       address,
-      addressBhawan,
-      admissionDate,
-      contactNumberAsBhawan,
-      feeStatus,
       city,
       state,
-      country,
-      insideCampus,
       postalCode,
+      country,
+      previousRecords
+    } = this.state
+    const homeAddress = [address, city, state, postalCode, country].map(asText).filter(Boolean).join(', ')
+    const details = [
+      ['Program', asText(program)],
+      ['Department', department],
+      ['Year · Sem', [currentYear, currentSemester].filter((value) => value || value === 0).join(' · ')],
+      ['Email', emailAddress],
+      ['Phone', phoneNumber],
+      ['Date of birth', dateOfBirth && formatDate(dateOfBirth)],
+      ['Home address', homeAddress]
+    ]
+    const earlier = previousRecords.filter((record) => record.endDate)
+
+    return (
+      <Segment loading={loading}>
+        <div styleName='student-head'>
+          <Image src={displayPicture || PLACEHOLDER_PICTURE} size='tiny' circular />
+          <Header as='h3'>
+            {name}
+            <Header.Subheader>{selected.enrolmentNumber}</Header.Subheader>
+          </Header>
+        </div>
+        {this.renderStatus(status, hostelName)}
+        <Divider />
+        <div styleName='section-label'>From Channeli · read only</div>
+        <dl styleName='details'>
+          {details.map(([label, value]) => (
+            <React.Fragment key={label}>
+              <dt>{label}</dt>
+              <dd>{value || '—'}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
+        {earlier.length > 0 && (
+          <React.Fragment>
+            <Divider />
+            <div styleName='section-label'>Earlier residencies</div>
+            {earlier.map((record) => (
+              <div key={`${record.hostel}-${record.startDate}`} styleName='earlier'>
+                {constants.hostels[record.hostel] || record.hostel} · {formatDate(record.startDate)} to {formatDate(record.endDate)}
+              </div>
+            ))}
+          </React.Fragment>
+        )}
+      </Segment>
+    )
+  }
+
+  renderForm = (status, hostelName) => {
+    const { constants } = this.props
+    const {
+      roomNo,
+      startDate,
+      feeStatus,
+      insideCampus,
+      admissionDate,
+      contactNumberAsBhawan,
+      addressBhawan,
       fathersName,
       fathersContact,
       mothersName,
       mothersContact,
-      editLoading,
       registerLoading,
-      deregisterLoading,
-      isResident
+      editLoading
     } = this.state
-    const { constants } = this.props;
-    let feeOptions = [];
-    for(const option in constants.statuses.FEE_TYPES) {
-      feeOptions = [
-        ...feeOptions,
-        {
-          key: option.toString(),
-          text: constants.statuses.FEE_TYPES[option].toString(),
-          value: option.toString(),
-        }
-      ]
-    }
+    const feeOptions = Object.keys(constants.statuses.FEE_TYPES).map((option) => ({
+      key: option,
+      text: constants.statuses.FEE_TYPES[option],
+      value: option
+    }))
+    const incomplete = !roomNo || !feeStatus
+    const isHere = status.key === 'here'
+
+    return (
+      <Segment.Group>
+        <Segment>
+          <Form>
+            <Header as='h4' dividing>Room</Header>
+            <Form.Group widths='equal'>
+              <Form.Input required label='Room no.' name='roomNo' value={roomNo} onChange={this.fieldsChange} />
+              <Form.Input label='Date of joining' name='startDate' type='datetime-local' value={startDate} onChange={this.fieldsChange} />
+            </Form.Group>
+            <Form.Group widths='equal'>
+              <Form.Dropdown
+                required
+                selection
+                label='Fee status'
+                name='feeStatus'
+                placeholder='Choose fee status'
+                options={feeOptions}
+                value={feeStatus}
+                onChange={this.fieldsChange}
+              />
+              <Form.Field styleName='toggle-field'>
+                <Form.Checkbox toggle label='Living inside campus' checked={!!insideCampus} onChange={this.checkedChange} />
+              </Form.Field>
+            </Form.Group>
+
+            <Header as='h4' dividing>As per bhawan records</Header>
+            <Form.Group widths='equal'>
+              <Form.Input label='Admission date' name='admissionDate' type='datetime-local' value={admissionDate} onChange={this.fieldsChange} />
+              <Form.Input label='Contact number' name='contactNumberAsBhawan' value={contactNumberAsBhawan} onChange={this.fieldsChange} />
+            </Form.Group>
+            <Form.TextArea label='Home address' name='addressBhawan' rows={2} value={addressBhawan} onChange={this.fieldsChange} />
+
+            <Header as='h4' dividing>Parents</Header>
+            <Form.Group widths='equal'>
+              <Form.Input label="Father's name" name='fathersName' value={fathersName} onChange={this.fieldsChange} />
+              <Form.Input label="Father's contact" name='fathersContact' value={fathersContact} onChange={this.fieldsChange} />
+            </Form.Group>
+            <Form.Group widths='equal'>
+              <Form.Input label="Mother's name" name='mothersName' value={mothersName} onChange={this.fieldsChange} />
+              <Form.Input label="Mother's contact" name='mothersContact' value={mothersContact} onChange={this.fieldsChange} />
+            </Form.Group>
+          </Form>
+        </Segment>
+        <Segment secondary styleName='form-footer'>
+          <span styleName='hint'>* Required. Channeli details are never changed here.</span>
+          <div>
+            {isHere ? (
+              <React.Fragment>
+                <Button basic type='button' onClick={this.reloadStudent} disabled={editLoading}>
+                  Discard changes
+                </Button>
+                <Button primary type='button' loading={editLoading} disabled={incomplete || editLoading} onClick={this.editStudent}>
+                  Save changes
+                </Button>
+              </React.Fragment>
+            ) : (
+              <Button primary type='button' loading={registerLoading} disabled={incomplete || registerLoading} onClick={this.registerStudent}>
+                {status.key === 'elsewhere' ? `Move to ${hostelName}` : `Register in ${hostelName}`}
+              </Button>
+            )}
+          </div>
+        </Segment>
+      </Segment.Group>
+    )
+  }
+
+  render () {
+    const { constants, activeHostel } = this.props
+    const { selected, options, name, confirmOpen, deregisterLoading } = this.state
+    const hostelName = constants.hostels[activeHostel] || activeHostel
+    const status = this.getStatus()
 
     return (
       <Grid>
         <Grid.Column width={16}>
-          <RegistrationTabs active='single' />
-          <Container fluid>
-            <Image
-              src={displayPicture?
-                    displayPicture:
-                    "https://react.semantic-ui.com/images/wireframe/square-image.png"
-                  }
-              size='tiny'
-              circular
-              centered
-            />
-            <Form centered>
-              <Form.Group widths='equal'>
-                <Form.Field >
-                  <label>Enrollment No.</label>
+          <RegistrationTabs active='single' hostelName={hostelName} />
+          <Segment>
+            <Form>
+              <Form.Field>
+                <label>Find student</label>
+                <div styleName='search-row'>
                   <Dropdown
-                    name='enrollment'
+                    fluid
+                    search
+                    selection
+                    icon='search'
+                    placeholder='Enrolment number or name'
+                    noResultsMessage='No student found. Only students on Channeli can be registered.'
                     onSearchChange={this.onSearchChange}
                     onChange={this.onChange}
                     value={selected}
-                    search
-                    selection
-                    closeOnChange
                     options={options}
                   />
-                </Form.Field>
-                <Form.Field>
-                  <label>Name</label>
-                  <Input
-                    name='name'
-                    value={name}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field required>
-                  <label>Room No.</label>
-                  <Input
-                    name='roomNo'
-                    value={roomNo}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-                <Form.Field required>
-                  <label>Date of Joining in Bhawan</label>
-                  <Input
-                    name='startDate'
-                    type='datetime-local'
-                    value={startDate}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                  <label>Inside Campus</label>
-                  <Checkbox
-                    name='insideCampus'
-                    checked={insideCampus}
-                    onClick={this.checkedChange}
-                  />
-                </Form.Field>
-                <Form.Field required>
-                  <label>Fee Status</label>
-                  <Dropdown
-                    name='feeStatus'
-                    selection
-                    options={feeOptions}
-                    value={feeStatus}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                  <label>Fathers Name</label>
-                  <Input
-                    name='fathersName'
-                    value={fathersName}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-                <Form.Field>
-                  <label>Fathers Contact</label>
-                  <Input
-                    name='fathersContact'
-                    value={fathersContact}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                  <label>Mothers Name</label>
-                  <Input
-                    name='mothersName'
-                    value={mothersName}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-                <Form.Field>
-                  <label>Mothers Contact</label>
-                  <Input
-                    name='mothersContact'
-                    value={mothersContact}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                  <label>Student Home Address as per Bhawan Records</label>
-                  <Input
-                    name='addressBhawan'
-                    value={addressBhawan}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                  <label>Admission Date</label>
-                  <Input
-                    name='admissionDate'
-                    type='datetime-local'
-                    value={admissionDate}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-                <Form.Field>
-                  <label>Contact Number As Per Bhawan Records</label>
-                  <Input
-                    name='contactNumberAsBhawan'
-                    value={contactNumberAsBhawan}
-                    onChange={this.fieldsChange}
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                  <label>Department</label>
-                  <Input
-                    name="department"
-                    value={department}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-                <Form.Field>
-                    <label>Current Semester</label>
-                    <Input
-                      name="currentSemester"
-                      value={currentSemester}
-                      readOnly
-                      disabled
-                      loading={loading}
-                    />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                    <label>Current Year</label>
-                    <Input
-                      name="currentYear"
-                      value={currentYear}
-                      readOnly
-                      disabled
-                      loading={loading}
-                    />
-                </Form.Field>
-                <Form.Field>
-                  <label>Program</label>
-                  <Input
-                    name="program"
-                    value={program}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                    <label>Phone Number</label>
-                    <Input
-                      name="phoneNumber"
-                      value={phoneNumber}
-                      readOnly
-                      disabled
-                      loading={loading}
-                    />
-                </Form.Field>
-                <Form.Field>
-                  <label>Date of Birth</label>
-                  <Input
-                    name="dateOfBirth"
-                    value={dateOfBirth}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                    <label>Address</label>
-                    <Input
-                      name="address"
-                      value={address}
-                      readOnly
-                      disabled
-                      loading={loading}
-                    />
-                </Form.Field>
-                <Form.Field>
-                  <label>City</label>
-                  <Input
-                    name="city"
-                    value={city}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                    <label>State</label>
-                    <Input
-                      name="state"
-                      value={state}
-                      readOnly
-                      disabled
-                      loading={loading}
-                    />
-                </Form.Field>
-                <Form.Field>
-                  <label>Country</label>
-                  <Input
-                    name="country"
-                    value={country}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              <Form.Group widths='equal'>
-                <Form.Field>
-                  <label>Email Address</label>
-                  <Input
-                    name="emailAddress"
-                    value={emailAddress}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-                <Form.Field>
-                  <label>Postal Code</label>
-                  <Input
-                    name="postalCode"
-                    value={postalCode}
-                    readOnly
-                    disabled
-                    loading={loading}
-                  />
-                </Form.Field>
-              </Form.Group>
-              {isResident && (
-                <div className='ui negative message'>
-                  This student is already registered in this bhawan. Use Edit Resident to update their details.
+                  <Button basic type='button' disabled={!selected} onClick={this.clearStudent}>
+                    Clear
+                  </Button>
                 </div>
-              )}
-              <div>
-              <Button
-                  primary
-                  type='submit'
-                  loading={editLoading}
-                  onClick={this.editStudent}
-                  disabled={!roomNo || !selected || !feeStatus}
-                >
-                  Edit Resident
-                </Button>
-                <Button
-                  primary
-                  type='submit'
-                  loading={registerLoading}
-                  onClick={this.registerStudent}
-                  disabled={!roomNo || !selected || !feeStatus || isResident}
-                >
-                  Register
-                </Button>
-                <Button
-                  secondary
-                  type='submit'
-                  onClick={this.deRegisterStudent}
-                  loading={deregisterLoading}
-                  disabled={!selected}
-                >
-                  Deregister
-                </Button>
-              </div>
+              </Form.Field>
             </Form>
-          </Container>
+            <p styleName='hint'>Search by enrolment number or name. Only students on Channeli appear here.</p>
+          </Segment>
+
+          {selected && (
+            <Grid stackable>
+              <Grid.Column width={5}>
+                {this.renderStudentCard(status, hostelName)}
+              </Grid.Column>
+              <Grid.Column width={11}>
+                {this.renderForm(status, hostelName)}
+                {status.key === 'here' && (
+                  <Segment color='red' styleName='danger'>
+                    <div>
+                      <Header as='h4' color='red'>Deregister from {hostelName}</Header>
+                      <p>Ends the residency today. The record stays in Student Database under earlier residencies.</p>
+                    </div>
+                    <Button basic negative type='button' loading={deregisterLoading} disabled={deregisterLoading} onClick={() => this.setState({ confirmOpen: true })}>
+                      Deregister…
+                    </Button>
+                  </Segment>
+                )}
+              </Grid.Column>
+            </Grid>
+          )}
+
+          <Confirm
+            open={confirmOpen}
+            header={`Deregister ${name}?`}
+            content={`This ends their residency in ${hostelName} today.`}
+            confirmButton='Deregister'
+            onCancel={() => this.setState({ confirmOpen: false })}
+            onConfirm={this.deRegisterStudent}
+          />
         </Grid.Column>
       </Grid>
     )
   }
 }
 
-function mapStateToProps(state) {
+function mapStateToProps (state) {
   return {
     searchPersonResults: state.searchPersonResults,
     searchResidentResult: state.searchResidentResult,
@@ -853,8 +663,11 @@ const mapDispatchToProps = (dispatch) => {
     },
     editResident: (data, url, successCallBack, errCallBack) => {
       dispatch(editResident(data, url, successCallBack, errCallBack))
+    },
+    fetchPreviousRecords: (url, successCallBack, errCallBack) => {
+      dispatch(fetchPreviousRecords(url, successCallBack, errCallBack))
     }
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps) (RegisterStudent)
+export default connect(mapStateToProps, mapDispatchToProps)(RegisterStudent)

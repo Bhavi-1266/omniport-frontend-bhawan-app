@@ -1,20 +1,81 @@
-.field{
+.search-row {
     display: flex;
+    gap: 0.75rem;
+    align-items: center;
 }
-.date-margin{
-    margin-right: 15px !important;
+
+.hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.6);
 }
-.complaint{
-    width: 633px !important;
-    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.05) !important; 
+
+.student-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
-.button{
-    background: #304FFE !important;
-    box-shadow: 2px 2px 16px rgba(0, 0, 0, 0.06) !important;
-    border-radius: 4px !important;
-    font-family: Lato !important;
-    font-style: normal !important;
-    font-weight: normal !important;
-    color: #FFFFFF !important;
-    width: 226px !important;
+
+.student-head :global(.ui.header) {
+    margin: 0;
+}
+
+.section-label {
+    margin-bottom: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.details {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 0.6rem 0.75rem;
+    margin: 0;
+}
+
+.details dt {
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.earlier {
+    margin-bottom: 0.35rem;
+}
+
+.toggle-field {
+    display: flex !important;
+    align-items: flex-end;
+    padding-bottom: 0.6rem;
+}
+
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.form-footer .hint {
+    margin: 0;
+}
+
+.danger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.danger p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
 }
