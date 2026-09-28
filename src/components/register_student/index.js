@@ -502,11 +502,10 @@ class RegisterStudent extends React.Component {
     }
 
     return (
-      <React.Fragment>
-      <RegistrationTabs active='single' />
-      <Grid container centered>
-        <Grid.Column width={6} centered>
-          <Container centered>
+      <Grid>
+        <Grid.Column width={16}>
+          <RegistrationTabs active='single' />
+          <Container fluid>
             <Image
               src={displayPicture?
                     displayPicture:
@@ -517,7 +516,7 @@ class RegisterStudent extends React.Component {
               centered
             />
             <Form centered>
-              <Form.Group>
+              <Form.Group widths='equal'>
                 <Form.Field >
                   <label>Enrollment No.</label>
                   <Dropdown
@@ -542,7 +541,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group fluid widths='equal'>
+              <Form.Group widths='equal'>
                 <Form.Field required>
                   <label>Room No.</label>
                   <Input
@@ -563,7 +562,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group fluid widths='equal'>
+              <Form.Group widths='equal'>
                 <Form.Field>
                   <label>Inside Campus</label>
                   <Checkbox
@@ -584,7 +583,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group fluid widths='equal'>
+              <Form.Group widths='equal'>
                 <Form.Field>
                   <label>Fathers Name</label>
                   <Input
@@ -604,7 +603,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group fluid widths='equal'>
+              <Form.Group widths='equal'>
                 <Form.Field>
                   <label>Mothers Name</label>
                   <Input
@@ -624,7 +623,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group fluid widths='equal'>
+              <Form.Group widths='equal'>
                 <Form.Field>
                   <label>Student Home Address as per Bhawan Records</label>
                   <Input
@@ -635,7 +634,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group  fluid widths='equal'>
+              <Form.Group widths='equal'>
                 <Form.Field>
                   <label>Admission Date</label>
                   <Input
@@ -656,7 +655,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group>
+              <Form.Group widths='equal'>
                 <Form.Field>
                   <label>Department</label>
                   <Input
@@ -678,7 +677,7 @@ class RegisterStudent extends React.Component {
                     />
                 </Form.Field>
               </Form.Group>
-              <Form.Group>
+              <Form.Group widths='equal'>
                 <Form.Field>
                     <label>Current Year</label>
                     <Input
@@ -700,7 +699,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group>
+              <Form.Group widths='equal'>
                 <Form.Field>
                     <label>Phone Number</label>
                     <Input
@@ -722,7 +721,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group>
+              <Form.Group widths='equal'>
                 <Form.Field>
                     <label>Address</label>
                     <Input
@@ -744,7 +743,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group>
+              <Form.Group widths='equal'>
                 <Form.Field>
                     <label>State</label>
                     <Input
@@ -766,7 +765,7 @@ class RegisterStudent extends React.Component {
                   />
                 </Form.Field>
               </Form.Group>
-              <Form.Group>
+              <Form.Group widths='equal'>
                 <Form.Field>
                   <label>Email Address</label>
                   <Input
@@ -826,7 +825,6 @@ class RegisterStudent extends React.Component {
           </Container>
         </Grid.Column>
       </Grid>
-      </React.Fragment>
     )
   }
 }
