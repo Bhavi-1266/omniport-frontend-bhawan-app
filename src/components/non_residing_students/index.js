@@ -164,10 +164,11 @@ class NonResidingStudents extends React.Component {
       ]
     })
 
+    const toCsvRow = (row) => row.map((col) => `"${String(col).replace(/"/g, '""')}"`).join(',')
     const csvLines = [
-      `Filtered on:,${filteredOn}`,
+      toCsvRow(['Filtered on:', filteredOn]),
       'Name of the bhawan,Name,Designation,Department,Mobile number,Room number,From (date),Upto (date),Email-id',
-      ...rows.map((row) => row.map((col) => `"${String(col).replace(/"/g, '""')}"`).join(',')),
+      ...rows.map(toCsvRow),
     ]
 
     const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' })
